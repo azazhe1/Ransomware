@@ -9,7 +9,8 @@
 >By using this project, you agree to abide by all applicable laws and take full responsibility for your actions. The author assumes no liability for any misuse.
 
 ## Generating RSA Keys
-Before anything else, we need to generate our RSA key pair!
+Before anything else, we need to generate our RSA key pair.
+
 Run the following commands to create your private and public keys:
 ```bash
 openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048  
