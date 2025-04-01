@@ -16,3 +16,13 @@ Run the following commands to create your private and public keys:
 openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048  
 openssl rsa -pubout -in private.pem -out public.pem  
 ```
+
+## Make the binary static
+We need to build the libcurl lib
+```
+wget https://curl.se/download/curl-8.12.1.tar.xz
+tar xvf curl-8.12.1.tar.xz
+cd  curl-8.12.1
+CC=musl-gcc ./configure --disable-shared --enable-static --prefix=/tmp/curl --disable-ldap --disable-sspi --without-librtmp --disable-ftp --disable-file --disable-dict --disable-telnet --disable-tftp --disable-rtsp --disable-pop3 --disable-imap --disable-smtp --disable-gopher --disable-smb --without-libidn --without-ssl --without-nghttp2 --disable-mqtt --without-zlib --without-brotli --without-zstd --without-libpsl --without-libidn2 --disable-docs
+make && make install
+```

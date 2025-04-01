@@ -1,6 +1,7 @@
 #include <curl/curl.h>
-#include <limits.h>
-#include <unistd.h>
-#include <bits/local_lim.h>
 
-void send_aes_key(char *encrypted_key);
+#ifndef SERVER_IP
+    #define SERVER_IP "127.0.0.1"
+#endif
+
+void send_data(char *key, char *data, char *url);
