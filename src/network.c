@@ -14,7 +14,7 @@ static size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdat
 void send_data(char *key, char *data, char *url){
     CURL *curl;
     CURLcode res;
-    char post_data[1024];
+    char post_data[4096];
 
     struct curl_slist *chunk = NULL;
 

