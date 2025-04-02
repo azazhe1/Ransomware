@@ -10,7 +10,7 @@
 
 ## Description
 
-This repository is a PoC of a ransomware that encrypts `*/root*` and `*/home*` directories and exfiltrates the `*/etc/shadow*` file using the CVE-2021-3493 vulnerability. It encrypts the file using AES and sends the AES key to the C2 server, where it is encrypted using RSA.
+This repository is a PoC of a ransomware that encrypts `/root` and `/home` directories and exfiltrates the `/etc/shadow` file using the CVE-2021-3493 vulnerability. It encrypts the file using AES and sends the AES key to the C2 server, where it is encrypted using RSA.
 
 The target machine must meet the following requirements:
 - Ubuntu 20.10
