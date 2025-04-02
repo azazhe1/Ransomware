@@ -8,6 +8,22 @@
 >
 >By using this project, you agree to abide by all applicable laws and take full responsibility for your actions. The author assumes no liability for any misuse.
 
+## Description
+
+This repository is a PoC of a ransomware that encrypts `*/root*` and `*/home*` directories and exfiltrates the `*/etc/shadow*` file using the CVE-2021-3493 vulnerability. It encrypts the file using AES and sends the AES key to the C2 server, where it is encrypted using RSA.
+
+The target machine must meet the following requirements:
+- Ubuntu 20.10
+- Ubuntu 20.04 LTS
+- Ubuntu 19.04
+- Ubuntu 18.04 LTS
+- Ubuntu 16.04 LTS
+- Ubuntu 14.04 ESM
+
+Additionally, the Linux kernel version must be < 5.11.
+
+The original exploit can be found here: [CVE-2021-3493 exploit](https://github.com/briskets/CVE-2021-3493)
+
 ## Requirement
 
 ```bash
